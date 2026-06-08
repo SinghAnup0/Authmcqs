@@ -212,34 +212,41 @@ window.updateHapticsUI = () => {
 // --- DATA FETCHING & ENGINE MERGE ---
 function loadSubjects() {
     window.showLoader();
+    // 1. Pass the active user email down the connection pipeline
     const userEmailParam = state.userEmail ? `&userEmail=${encodeURIComponent(state.userEmail)}` : '';
     const targetUrl = `${API_URL}?action=getSubjects&lang=${state.lang}${userEmailParam}`;
     
-    executeMatrixDiagnosticDebugger("loadSubjects Fetch Target", { url: targetUrl });
+    if (DEBUG_MODE) console.log("Fetching subjects from:", targetUrl);
 
     fetch(targetUrl)
         .then(res => res.json())
         .then(data => {
-            if (data.error) {
-                alert(`Access Blocked: ${data.message || "Unauthorized account verification pattern."}`);
+            // 2. SECURITY GUARD: If backend rejects user access
+            if (data && data.error) {
+                alert(`Access Blocked: ${data.message || "Unauthorized account."}`);
+                clearQuizState();
+                window.location.href = 'index.html'; // Evict user to login
                 return;
             }
             const container = document.getElementById('subjects-container');
             if(!container) return;
             container.innerHTML = "";
-            data.forEach(sub => {
-                const el = document.createElement('div');
-                el.className = "p-5 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer hover:border-brand-500/40 group";
-                el.onclick = () => { window.triggerHapticFeedback(15); state.activeSubject = sub; window.saveState(); window.location.href = 'chapters.html'; };
-                el.innerHTML = `
-                    <div class="flex items-center gap-4">
-                        <div class="w-11 h-11 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 flex items-center justify-center font-bold text-base shadow-sm">${sub.charAt(0).toUpperCase()}</div>
-                        <div><h4 class="font-bold text-sm text-slate-800 dark:text-slate-200">${sub}</h4></div>
-                    </div>
-                    <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:translate-x-0.5 transition-transform"></i>`;
-                container.appendChild(el);
-            });
-        }).catch(err => alert("Connection Lost: Failed to load modules."))
+            if (Array.isArray(data)) {
+                data.forEach(sub => {
+                    const el = document.createElement('div');
+                    el.className = "p-5 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer hover:border-brand-500/40 group";
+                    el.onclick = () => { window.triggerHapticFeedback(15); state.activeSubject = sub; window.saveState(); window.location.href = 'chapters.html'; };
+                    el.innerHTML = `
+                        <div class="flex items-center gap-4">
+                            <div class="w-11 h-11 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 flex items-center justify-center font-bold text-base shadow-sm">${sub.charAt(0).toUpperCase()}</div>
+                            <div><h4 class="font-bold text-sm text-slate-800 dark:text-slate-200">${sub}</h4></div>
+                        </div>
+                        <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:translate-x-0.5 transition-transform"></i>`;
+                    container.appendChild(el);
+                });
+            }
+        })
+        .catch(err => alert("Secure Database Connection Lost."))
         .finally(() => window.hideLoader());
 }
 
@@ -252,35 +259,91 @@ function loadChapters() {
     const userEmailParam = state.userEmail ? `&userEmail=${encodeURIComponent(state.userEmail)}` : '';
     const targetUrl = `${API_URL}?action=getChapters&sheetName=${encodeURIComponent(state.activeSubject)}&lang=${state.lang}${userEmailParam}`;
     
-    executeMatrixDiagnosticDebugger("loadChapters Fetch Target", { url: targetUrl });
-
     fetch(targetUrl)
         .then(res => res.json())
         .then(data => {
-            if (data.error) {
-                alert(`Access Blocked: ${data.message || "Unauthorized account verification pattern."}`);
+            // 2. SECURITY GUARD: If backend rejects user access
+            if (data && data.error) {
+                alert(`Access Blocked: ${data.message || "Unauthorized account."}`);
+                clearQuizState();
+                window.location.href = 'index.html'; // Evict user to login
                 return;
             }
             const container = document.getElementById('chapters-container');
             if(!container) return;
             container.innerHTML = "";
-            data.forEach((chap, idx) => {
-                const el = document.createElement('div');
-                el.className = "p-4 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-xl flex items-center justify-between cursor-pointer hover:border-brand-500/30";
-                el.onclick = () => { 
-                    window.triggerHapticFeedback(20); 
-                    state.activeChapter = chap; state.activeChapterIndex = idx; 
-                    state.allQuestions = []; state.currentQuestionIndex = 0; state.userAnswers = {};
-                    window.saveState(); window.location.href = 'quiz.html'; 
-                };
-                el.innerHTML = `
-                    <div class="flex items-center gap-3"><span class="text-xs font-bold text-slate-400 w-5">${idx + 1}.</span><span class="text-xs font-bold text-slate-700 dark:text-slate-300">${chap}</span></div>
-                    <i class="fa-solid fa-play text-[10px] text-brand-500 bg-brand-50 dark:bg-brand-950/40 p-2 rounded-lg"></i>`;
-                container.appendChild(el);
-            });
-        }).catch(err => alert("Connection Lost: Failed to parse structural items."))
+            if (Array.isArray(data)) {
+                data.forEach((chap, idx) => {
+                    const el = document.createElement('div');
+                    el.className = "p-4 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-xl flex items-center justify-between cursor-pointer hover:border-brand-500/30";
+                    el.onclick = () => { 
+                        window.triggerHapticFeedback(20); 
+                        state.activeChapter = chap; state.activeChapterIndex = idx; 
+                        state.allQuestions = []; state.currentQuestionIndex = 0; state.userAnswers = {};
+                        window.saveState(); window.location.href = 'quiz.html'; 
+                    };
+                    el.innerHTML = `
+                        <div class="flex items-center gap-3"><span class="text-xs font-bold text-slate-400 w-5">${idx + 1}.</span><span class="text-xs font-bold text-slate-700 dark:text-slate-300">${chap}</span></div>
+                        <i class="fa-solid fa-play text-[10px] text-brand-500 bg-brand-50 dark:bg-brand-950/40 p-2 rounded-lg"></i>`;
+                    container.appendChild(el);
+                });
+            }
+        })
+        .catch(err => alert("Secure Database Connection Lost."))
         .finally(() => window.hideLoader());
 }
+
+function launchQuizEvaluationEngine(chapterName, chapterIdx, isLanguageSwitch = false) {
+    state.activeChapterIndex = chapterIdx !== undefined ? chapterIdx : state.activeChapterIndex;
+    if (!isLanguageSwitch) { state.activeChapter = chapterName; }
+    saveState();
+
+    showLoader();
+    const panel = document.getElementById('explanation-panel');
+    if(panel) panel.classList.add('hidden');
+
+    const userEmailParam = state.userEmail ? `&userEmail=${encodeURIComponent(state.userEmail)}` : '';
+    const endpointUrl = `${API_URL}?action=getFullChapterData&sheetName=${encodeURIComponent(state.activeSubject)}&chapterName=${encodeURIComponent(chapterName)}&chapterIndex=${state.activeChapterIndex}&lang=${state.lang}${userEmailParam}`;
+
+    fetch(endpointUrl)
+        .then(res => res.json())
+        .then(data => {
+            // 2. SECURITY GUARD: If backend rejects user access
+            if (data && data.error) {
+                alert(`Access Blocked: ${data.message || "Unauthorized account."}`);
+                clearQuizState();
+                window.location.href = 'index.html'; // Evict user to login
+                return;
+            }
+            if (!Array.isArray(data) || data.length === 0) {
+                alert("Structural Failure: Unable to build parsing indexes.");
+                return;
+            }
+            state.allQuestions = data;
+            if (isLanguageSwitch && data.length > 0) {
+                 const indicator = document.getElementById('quiz-chapter-indicator');
+                 if(indicator) indicator.innerText = state.activeChapter.toUpperCase();
+            }
+            saveState();
+            const indicator = document.getElementById('quiz-chapter-indicator');
+            if(indicator) indicator.innerText = state.activeChapter.toUpperCase();
+            buildQuestionMatrixSelectionGrid();
+            renderActiveQuestionCard();
+            navigateTo('quiz');
+        })
+        .catch(err => alert("Secure Database Connection Lost."))
+        .finally(() => hideLoader());
+}
+
+// Helper utility to wipe local data configurations clear
+function clearQuizState() {
+    state.userEmail = "";
+    state.activeSubject = null;
+    state.activeChapter = null;
+    state.allQuestions = [];
+    saveState();
+}
+
 
 function toggleLanguage(lang, fetchNewData = true) {
     if (!lang) {
