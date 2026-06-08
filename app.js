@@ -143,16 +143,20 @@ window.applyFontSize = () => {
     optionsSpans.forEach(span => span.className = `opt-text-target scale-opt-${state.fontSizeIndex}`);
 };
 
-window.toggleLanguage = function(lang, fetchNewData = true) {
+// =============================================================
+// 1. FIXED MULTI-PAGE LANGUAGE TOGGLE FOR QUIZ.HTML
+// =============================================================
+function toggleLanguage(lang, fetchNewData = true) {
     if (!lang) {
         lang = state.lang === 'en' ? 'hi' : 'en';
     }
     if (lang !== 'en' && lang !== 'hi') return;
+    
+    // Save the newly selected language to localStorage
     state.lang = lang;
+    saveState();
     
-    if (typeof saveState === 'function') saveState();
-    else if (window.saveState) window.saveState();
-    
+    // Update the button UI styles directly on quiz.html
     const btnEn = document.getElementById('lang-btn-en');
     const btnHi = document.getElementById('lang-btn-hi');
     
@@ -168,73 +172,45 @@ window.toggleLanguage = function(lang, fetchNewData = true) {
         executeMatrixDiagnosticDebugger("UI Cross Language Action: Language Matrix Mutation Hook Captured", { selectedLanguage: state.lang, pipelineRemoteSync: fetchNewData });
     }
 
+    // Instead of calling complex view checks from the old file,
+    // a multi-page app just refreshes the current URL.
     if (fetchNewData) {
         if (typeof triggerHapticFeedback === 'function') triggerHapticFeedback(20);
         
-        // MPA-Safe DOM Resolution: Fallback gracefully if structural views are split into separate files
-        const viewQuizEl = document.getElementById('view-quiz') || document.getElementById('quiz-card-container');
-        const viewChaptersEl = document.getElementById('view-chapters') || document.getElementById('chapters-container');
-        
-        const isViewingQuiz = viewQuizEl ? (!viewQuizEl.classList.contains('hidden') || window.location.pathname.includes('quiz.html')) : window.location.pathname.includes('quiz.html');
-        const isViewingChapters = viewChaptersEl ? (!viewChaptersEl.classList.contains('hidden') || window.location.pathname.includes('chapters.html')) : window.location.pathname.includes('chapters.html');
-
-        if (isViewingQuiz && state.activeSubject && state.activeChapter) {
-            // Force the 3rd argument to true, identifying this as an in-place translation update
-            if (typeof launchQuizEvaluationEngine === 'function') {
-                launchQuizEvaluationEngine(state.activeChapter, state.activeChapterIndex, true);
-            } else if (window.launchQuizEvaluationEngine) {
-                window.launchQuizEvaluationEngine(state.activeChapter, state.activeChapterIndex, true);
-            }
-        } else if (isViewingChapters && state.activeSubject) {
-            if (typeof loadChapters === 'function') loadChapters();
-        } else {
-            if (typeof clearQuizState === 'function') clearQuizState();
-            if (typeof loadSubjects === 'function') loadSubjects();
-        }
+        // Hard refresh: this forces the page to reload, reading the updated state.lang 
+        // from localStorage and cleanly sending a fresh request to your backend.
+        window.location.reload();
     }
-};
-
-function launchQuizEvaluationEngine(chapterName, chapterIdx, isLanguageSwitch = false) {
-    state.activeChapterIndex = chapterIdx !== undefined ? chapterIdx : state.activeChapterIndex;
-    
-    // Explicitly check for the language switch flag to block accidental state wipes
-    if (!isLanguageSwitch) {
-        state.allQuestions = [];
-        state.currentQuestionIndex = 0;
-        state.userAnswers = {};
-        state.activeChapter = chapterName;
-    }
-    saveState();
-
-    showLoader();
-    const panel = document.getElementById('explanation-panel');
-    if(panel) panel.classList.add('hidden');
-
-    const endpointUrl = `${API_URL}?action=getFullChapterData&sheetName=${encodeURIComponent(state.activeSubject)}&chapterName=${encodeURIComponent(chapterName)}&chapterIndex=${state.activeChapterIndex}&lang=${state.lang}`;
-    executeMatrixDiagnosticDebugger("Networking Pipeline Hook: Fetching Complete Target Questions Stream Node Packet", { url: endpointUrl, chapterIndex: state.activeChapterIndex, languageToggleAction: isLanguageSwitch });
-
-    fetch(endpointUrl)
-        .then(res => res.json())
-        .then(data => {
-            executeMatrixDiagnosticDebugger("Networking Response Received: Structural Evaluation Questions Collection Data", { questionsCount: data?.length, questionsPayload: data });
-            if (data.error || !Array.isArray(data) || data.length === 0) {
-                alert("Structural Failure: Unable to build parsing indexes.");
-                return;
-            }
-            
-            state.allQuestions = data;
-            saveState();
-            
-            const indicator = document.getElementById('quiz-chapter-indicator');
-            if(indicator) indicator.innerText = state.activeChapter.toUpperCase();
-            
-            buildQuestionMatrixSelectionGrid();
-            renderActiveQuestionCard();
-            navigateTo('quiz');
-        })
-        .catch(err => showNetworkError(err))
-        .finally(() => hideLoader());
 }
+
+// =============================================================
+// 2. MAKE SURE YOUR ON-LOAD RUNS THE BACKEND FETCH
+// =============================================================
+document.addEventListener('DOMContentLoaded', () => {
+    // 1. Sync local storage settings
+    if (typeof loadState === 'function') loadState(); 
+    
+    // 2. Set active button UI colors based on loaded state language
+    const btnEn = document.getElementById('lang-btn-en');
+    const btnHi = document.getElementById('lang-btn-hi');
+    if (state.lang === 'hi') {
+        if(btnHi) btnHi.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm";
+        if(btnEn) btnEn.className = "px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
+    } else {
+        if(btnEn) btnEn.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm";
+        if(btnHi) btnHi.className = "px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
+    }
+    
+    // 3. Kick off your original request engine to fetch data with the active language
+    if (state.activeSubject && state.activeChapter) {
+        // Pass "true" as the third argument so it preserves your active quiz session markers 
+        // without wiping out the question indices during the reload sequence.
+        launchQuizEvaluationEngine(state.activeChapter, state.activeChapterIndex, true);
+    } else {
+        // Fallback safety if someone visits quiz.html directly without selecting a chapter
+        window.location.href = 'chapters.html';
+    }
+});
 
 window.triggerHapticFeedback = (ms) => { if (state.haptics && navigator.vibrate) navigator.vibrate(ms); };
 window.toggleHaptics = () => { state.haptics = !state.haptics; window.saveState(); window.updateHapticsUI(); if(state.haptics) window.triggerHapticFeedback(20); };
