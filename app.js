@@ -52,47 +52,48 @@ window.loginUser = async () => {
 };
 
 window.logoutUser = async () => {
-    try { await signOut(auth); clearQuizState(); } 
+    try { await signOut(auth); window.clearQuizState(); } 
     catch (error) { console.error("Logout Error:", error); }
 };
 
 // --- ROUTER & INITIALIZATION ---
 document.addEventListener("DOMContentLoaded", () => {
-    loadState();
-    initSystemTheme();
+    window.loadState();
+    window.initSystemTheme();
     window.toggleLanguage(state.lang, false);
     window.applyFontSize();
     
     const path = window.location.pathname;
-    if (path.includes('subjects.html')) loadSubjects();
-    if (path.includes('chapters.html')) loadChapters();
-    if (path.includes('quiz.html')) fetchQuizDataAndRender();
-    if (path.includes('results.html')) renderResults();
+    if (path.includes('subjects.html')) window.loadSubjects();
+    if (path.includes('chapters.html')) window.loadChapters();
+    if (path.includes('quiz.html')) window.fetchQuizDataAndRender();
+    if (path.includes('results.html')) window.renderResults();
     
-    initSwipeGestures();
+    window.initSwipeGestures();
 });
 
-// --- CORE FUNCTIONS (Attached to Window for HTML access) ---
+// --- CORE FUNCTIONS (Explicitly Bound to Window Space for Layout Context) ---
 window.saveState = () => { localStorage.setItem('mcq_engine_state', JSON.stringify(state)); };
 
-function loadState() {
+window.loadState = () => {
     const saved = localStorage.getItem('mcq_engine_state');
     if (saved) {
         try { state = { ...state, ...JSON.parse(saved) }; } 
         catch (e) { console.error("State parse error", e); }
     }
     window.updateHapticsUI();
-}
+};
 
-function clearQuizState() {
+window.clearQuizState = () => {
     state.activeSubject = ""; state.activeChapter = ""; state.activeChapterIndex = 0;
     state.allQuestions = []; state.currentQuestionIndex = 0; state.userAnswers = {};
     window.saveState();
-}
+};
 
 // UI Controllers
 window.showLoader = () => { const l = document.getElementById('global-loader'); if(l) l.classList.remove('hidden'); };
 window.hideLoader = () => { const l = document.getElementById('global-loader'); if(l) l.classList.add('hidden'); };
+
 window.toggleSidebar = () => {
     const overlay = document.getElementById('sidebar-overlay');
     const menu = document.getElementById('sidebar-menu');
@@ -115,16 +116,16 @@ window.toggleDarkMode = () => {
     if(icon) icon.className = isDark ? "fa-solid fa-sun text-xs" : "fa-solid fa-moon text-xs";
 };
 
-function initSystemTheme() {
+window.initSystemTheme = () => {
     if (localStorage.theme === 'dark' || (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark');
         const icon = document.getElementById('theme-icon');
         if(icon) icon.className = "fa-solid fa-sun text-xs";
     }
-}
+};
 
 // Navigation & Actions
-window.clearAndGoHome = () => { window.triggerHapticFeedback(15); clearQuizState(); window.location.href = 'subjects.html'; };
+window.clearAndGoHome = () => { window.triggerHapticFeedback(15); window.clearQuizState(); window.location.href = 'subjects.html'; };
 window.goBackToSubjects = () => { window.triggerHapticFeedback(10); window.location.href = 'subjects.html'; };
 window.goBackToChaptersList = () => { window.triggerHapticFeedback(15); state.allQuestions = []; state.currentQuestionIndex = 0; state.userAnswers = {}; window.saveState(); window.location.href = 'chapters.html'; };
 
@@ -143,74 +144,31 @@ window.applyFontSize = () => {
     optionsSpans.forEach(span => span.className = `opt-text-target scale-opt-${state.fontSizeIndex}`);
 };
 
-// =============================================================
-// 1. FIXED MULTI-PAGE LANGUAGE TOGGLE FOR QUIZ.HTML
-// =============================================================
-function toggleLanguage(lang, fetchNewData = true) {
-    if (!lang) {
-        lang = state.lang === 'en' ? 'hi' : 'en';
-    }
-    if (lang !== 'en' && lang !== 'hi') return;
+window.toggleLanguage = (lang, fetchNewData = true) => {
+    lang = lang || (state.lang === 'en' ? 'hi' : 'en');
+    state.lang = lang; window.saveState();
     
-    // Save the newly selected language to localStorage
-    state.lang = lang;
-    saveState();
-    
-    // Update the button UI styles directly on quiz.html
     const btnEn = document.getElementById('lang-btn-en');
     const btnHi = document.getElementById('lang-btn-hi');
-    
-    if (state.lang === 'hi') {
-        if(btnHi) btnHi.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm";
-        if(btnEn) btnEn.className = "px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
-    } else {
-        if(btnEn) btnEn.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm";
-        if(btnHi) btnHi.className = "px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
-    }
-
-    if (typeof executeMatrixDiagnosticDebugger === 'function') {
-        executeMatrixDiagnosticDebugger("UI Cross Language Action: Language Matrix Mutation Hook Captured", { selectedLanguage: state.lang, pipelineRemoteSync: fetchNewData });
-    }
-
-    // Instead of calling complex view checks from the old file,
-    // a multi-page app just refreshes the current URL.
-    if (fetchNewData) {
-        if (typeof triggerHapticFeedback === 'function') triggerHapticFeedback(20);
-        
-        // Hard refresh: this forces the page to reload, reading the updated state.lang 
-        // from localStorage and cleanly sending a fresh request to your backend.
-        window.location.reload();
-    }
-}
-
-// =============================================================
-// 2. MAKE SURE YOUR ON-LOAD RUNS THE BACKEND FETCH
-// =============================================================
-document.addEventListener('DOMContentLoaded', () => {
-    // 1. Sync local storage settings
-    if (typeof loadState === 'function') loadState(); 
-    
-    // 2. Set active button UI colors based on loaded state language
-    const btnEn = document.getElementById('lang-btn-en');
-    const btnHi = document.getElementById('lang-btn-hi');
-    if (state.lang === 'hi') {
-        if(btnHi) btnHi.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm";
-        if(btnEn) btnEn.className = "px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
-    } else {
-        if(btnEn) btnEn.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm";
-        if(btnHi) btnHi.className = "px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
+    if(btnHi && btnEn) {
+        btnHi.className = lang === 'hi' ? "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black bg-brand-600 text-white shadow-sm" : "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
+        btnEn.className = lang === 'en' ? "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black bg-brand-600 text-white shadow-sm" : "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
     }
     
-    // 3. Kick off your original request engine to fetch data with the active language
-    if (state.activeSubject && state.activeChapter) {
-        // Pass "true" as the third argument so it preserves your active quiz session markers 
-        // without wiping out the question indices during the reload sequence.
-        launchQuizEvaluationEngine(state.activeChapter, state.activeChapterIndex, true);
-    } else {
-        // Fallback safety if someone visits quiz.html directly without selecting a chapter
-        window.location.href = 'chapters.html';
+    // FIXED: Instead of window.location.reload() which wipes temporary state parameters, 
+    // dynamically reload backend layout data for the current active view.
+    if(fetchNewData) {
+        const path = window.location.pathname;
+        if (path.includes('subjects.html')) window.loadSubjects();
+        if (path.includes('chapters.html')) window.loadChapters();
+        if (path.includes('quiz.html')) {
+            // Force clearing old downloaded tracks so fresh translated objects load down safely
+            state.allQuestions = []; 
+            window.saveState();
+            window.fetchQuizDataAndRender();
+        }
     }
-});
+};
 
 window.triggerHapticFeedback = (ms) => { if (state.haptics && navigator.vibrate) navigator.vibrate(ms); };
 window.toggleHaptics = () => { state.haptics = !state.haptics; window.saveState(); window.updateHapticsUI(); if(state.haptics) window.triggerHapticFeedback(20); };
@@ -227,7 +185,7 @@ window.updateHapticsUI = () => {
 };
 
 // --- DATA FETCHING & RENDERING ---
-function loadSubjects() {
+window.loadSubjects = () => {
     window.showLoader();
     fetch(`${API_URL}?action=getSubjects&lang=${state.lang}`)
         .then(res => res.json())
@@ -248,17 +206,19 @@ function loadSubjects() {
                 container.appendChild(el);
             });
         }).finally(() => window.hideLoader());
-}
+};
 
-function loadChapters() {
+window.loadChapters = () => {
     if(!state.activeSubject) { window.location.href = 'subjects.html'; return; }
     window.showLoader();
-    document.getElementById('current-subject-title').innerText = state.activeSubject.replace(/\.json$/i, '');
+    const titleNode = document.getElementById('current-subject-title');
+    if(titleNode) titleNode.innerText = state.activeSubject.replace(/\.json$/i, '');
     
     fetch(`${API_URL}?action=getChapters&sheetName=${encodeURIComponent(state.activeSubject)}&lang=${state.lang}`)
         .then(res => res.json())
         .then(data => {
             const container = document.getElementById('chapters-container');
+            if(!container) return;
             container.innerHTML = "";
             data.forEach((chap, idx) => {
                 const el = document.createElement('div');
@@ -275,38 +235,39 @@ function loadChapters() {
                 container.appendChild(el);
             });
         }).finally(() => window.hideLoader());
-}
+};
 
-function fetchQuizDataAndRender() {
+window.fetchQuizDataAndRender = () => {
     if (!state.activeSubject || !state.activeChapter) { window.location.href = 'subjects.html'; return; }
-    document.getElementById('quiz-chapter-indicator').innerText = state.activeChapter.toUpperCase();
+    const indicatorNode = document.getElementById('quiz-chapter-indicator');
+    if(indicatorNode) indicatorNode.innerText = state.activeChapter.toUpperCase();
     
-    if (state.allQuestions && state.allQuestions.length > 0) { renderQuizUI(); return; }
+    if (state.allQuestions && state.allQuestions.length > 0) { window.renderQuizUI(); return; }
 
     window.showLoader();
     fetch(`${API_URL}?action=getFullChapterData&sheetName=${encodeURIComponent(state.activeSubject)}&chapterName=${encodeURIComponent(state.activeChapter)}&chapterIndex=${state.activeChapterIndex}&lang=${state.lang}`)
         .then(res => res.json())
-        .then(data => { state.allQuestions = data; window.saveState(); renderQuizUI(); })
+        .then(data => { state.allQuestions = data; window.saveState(); window.renderQuizUI(); })
         .finally(() => window.hideLoader());
-}
+};
 
-function renderQuizUI() {
-    buildQuestionMatrixSelectionGrid();
-    renderActiveQuestionCard();
-}
+window.renderQuizUI = () => {
+    window.buildQuestionMatrixSelectionGrid();
+    window.renderActiveQuestionCard();
+};
 
 window.changeQuestion = (direction) => {
     window.triggerHapticFeedback(10);
     const targetIndex = state.currentQuestionIndex + direction;
     if (targetIndex >= 0 && targetIndex < state.allQuestions.length) {
-        state.currentQuestionIndex = targetIndex; window.saveState(); renderActiveQuestionCard();
+        state.currentQuestionIndex = targetIndex; window.saveState(); window.renderActiveQuestionCard();
     }
 };
 
 window.registerUserSelectionChoice = (chosenChar) => {
     if (state.userAnswers[state.currentQuestionIndex] !== undefined) return;
     state.userAnswers[state.currentQuestionIndex] = chosenChar;
-    window.saveState(); renderActiveQuestionCard();
+    window.saveState(); window.renderActiveQuestionCard();
     const qData = state.allQuestions[state.currentQuestionIndex];
     if (qData && chosenChar !== (qData.Answer || qData.answer || "").trim().toUpperCase()) {
         setTimeout(() => { window.toggleExplanation(true); }, 150);
@@ -320,7 +281,8 @@ window.toggleExplanation = (forcedState = null) => {
     const open = forcedState !== null ? forcedState : isHidden;
     if (open) {
         const qData = state.allQuestions[state.currentQuestionIndex];
-        document.getElementById('explanation-text').innerText = qData ? (qData.Explanation || qData.explanation || "No explanation data.") : "";
+        const textNode = document.getElementById('explanation-text');
+        if(textNode) textNode.innerText = qData ? (qData.Explanation || qData.explanation || "No explanation data.") : "";
         panel.classList.remove('hidden'); window.applyFontSize();
     } else { panel.classList.add('hidden'); }
 };
@@ -330,18 +292,26 @@ window.submitQuizEvaluationReport = () => {
     window.triggerHapticFeedback(30); window.saveState(); window.location.href = 'results.html';
 };
 
-// Contains internal rendering logic for Quiz/Results (abstracted for brevity but functions identically to your original code).
-function renderActiveQuestionCard() {
+window.renderActiveQuestionCard = () => {
     const qData = state.allQuestions[state.currentQuestionIndex];
     if (!qData) return;
     
-    document.getElementById('quiz-question-counter').innerText = `Q ${state.currentQuestionIndex + 1}/${state.allQuestions.length}`;
-    document.getElementById('quiz-progress-bar').style.width = `${((state.currentQuestionIndex + 1) / state.allQuestions.length) * 100}%`;
-    document.getElementById('question-text').innerText = qData.Question || qData.question || "";
-    document.getElementById('explanation-panel').classList.add('hidden');
+    const countNode = document.getElementById('quiz-question-counter');
+    if(countNode) countNode.innerText = `Q ${state.currentQuestionIndex + 1}/${state.allQuestions.length}`;
+    
+    const progressNode = document.getElementById('quiz-progress-bar');
+    if(progressNode) progressNode.style.width = `${((state.currentQuestionIndex + 1) / state.allQuestions.length) * 100}%`;
+    
+    const txtNode = document.getElementById('question-text');
+    if(txtNode) txtNode.innerText = qData.Question || qData.question || "";
+    
+    const expPanel = document.getElementById('explanation-panel');
+    if(expPanel) expPanel.classList.add('hidden');
 
     const container = document.getElementById('options-container');
+    if(!container) return;
     container.innerHTML = "";
+    
     const rawCorrectAnswer = (qData.Answer || qData.answer || "").trim().toUpperCase();
     const userSelection = state.userAnswers[state.currentQuestionIndex];
     const hasAnswered = userSelection !== undefined;
@@ -356,9 +326,9 @@ function renderActiveQuestionCard() {
         let badge = "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400";
         
         if (hasAnswered) {
-            if (isCorrect) { styles = "bg-emerald-50/60 border-emerald-500 text-emerald-900 dark:bg-emerald-950/20"; badge = "bg-emerald-500 text-white"; }
-            else if (isSelected) { styles = "bg-rose-50/60 border-rose-500 text-rose-900 dark:bg-rose-950/20"; badge = "bg-rose-500 text-white"; }
-            else { styles = "opacity-50 pointer-events-none"; }
+            if (isCorrect) { styles = "bg-emerald-50/60 border-emerald-500 text-emerald-900 dark:bg-emerald-950/20 dark:border-emerald-500 dark:text-emerald-300"; badge = "bg-emerald-500 text-white"; }
+            else if (isSelected) { styles = "bg-rose-50/60 border-rose-500 text-rose-900 dark:bg-rose-950/20 dark:border-rose-500 dark:text-rose-300"; badge = "bg-rose-500 text-white"; }
+            else { styles = "opacity-50 pointer-events-none border-slate-100 dark:border-slate-800/40 text-slate-400 dark:text-slate-600"; }
         }
 
         const btn = document.createElement('button');
@@ -369,62 +339,77 @@ function renderActiveQuestionCard() {
         container.appendChild(btn);
     });
 
-    // Scoreboard updates
+    // Live Scoreboard calculation
     let correct = 0, wrong = 0, skipped = 0;
     for(let i=0; i<=state.currentQuestionIndex; i++) {
         if(state.userAnswers[i] === undefined) skipped++;
         else if(state.userAnswers[i] === (state.allQuestions[i].Answer || "").trim().toUpperCase()) correct++;
         else wrong++;
     }
-    document.getElementById('score-live-correct').innerText = correct;
-    document.getElementById('score-live-wrong').innerText = wrong;
-    document.getElementById('score-live-skipped').innerText = skipped;
-    document.getElementById('score-live-percent').innerText = state.userAnswers.length === 0 ? 0 : Math.round((correct / Object.keys(state.userAnswers).length) * 100);
+    
+    const liveCorrect = document.getElementById('score-live-correct');
+    const liveWrong = document.getElementById('score-live-wrong');
+    const liveSkipped = document.getElementById('score-live-skipped');
+    const livePercent = document.getElementById('score-live-percent');
+
+    if(liveCorrect) liveCorrect.innerText = correct;
+    if(liveWrong) liveWrong.innerText = wrong;
+    if(liveSkipped) liveSkipped.innerText = skipped;
+    
+    const totalAnsweredCount = Object.keys(state.userAnswers).length;
+    if(livePercent) livePercent.innerText = totalAnsweredCount === 0 ? 0 : Math.round((correct / totalAnsweredCount) * 100);
     
     window.applyFontSize();
-    syncActiveMatrixItemGridHighlight();
-}
+    window.syncActiveMatrixItemGridHighlight();
+};
 
-function buildQuestionMatrixSelectionGrid() {
+window.buildQuestionMatrixSelectionGrid = () => {
     const grid = document.getElementById('question-matrix-grid');
     if(!grid) return; grid.innerHTML = "";
     state.allQuestions.forEach((_, idx) => {
         const btn = document.createElement('button');
         btn.id = `matrix-cell-${idx}`;
-        btn.onclick = () => { window.triggerHapticFeedback(10); state.currentQuestionIndex = idx; window.saveState(); renderActiveQuestionCard(); };
+        btn.onclick = () => { window.triggerHapticFeedback(10); state.currentQuestionIndex = idx; window.saveState(); window.renderActiveQuestionCard(); };
         btn.className = "h-9 w-full rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400";
         btn.innerText = idx + 1;
         grid.appendChild(btn);
     });
-}
+};
 
-function syncActiveMatrixItemGridHighlight() {
+window.syncActiveMatrixItemGridHighlight = () => {
     state.allQuestions.forEach((q, idx) => {
         const btn = document.getElementById(`matrix-cell-${idx}`);
         if (!btn) return;
         const ans = state.userAnswers[idx];
         if (ans !== undefined) {
-            if (ans === (q.Answer || "").trim().toUpperCase()) btn.className = "h-9 w-full rounded-xl text-xs font-bold border-emerald-500 bg-emerald-500 text-white";
-            else btn.className = "h-9 w-full rounded-xl text-xs font-bold border-rose-500 bg-rose-500 text-white";
+            if (ans === (q.Answer || "").trim().toUpperCase()) btn.className = "h-9 w-full rounded-xl text-xs font-bold border-emerald-500 bg-emerald-500 text-white shadow-sm";
+            else btn.className = "h-9 w-full rounded-xl text-xs font-bold border-rose-500 bg-rose-500 text-white shadow-sm";
         } else {
-            btn.className = "h-9 w-full rounded-xl text-xs font-bold border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400";
+            btn.className = "h-9 w-full rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400";
         }
         if (idx === state.currentQuestionIndex) btn.classList.add('ring-2', 'ring-brand-500', 'ring-offset-2', 'dark:ring-offset-slate-950');
     });
-}
+};
 
-function renderResults() {
+window.renderResults = () => {
     let correctCount = 0;
     state.allQuestions.forEach((q, idx) => {
         if (q && state.userAnswers[idx] === (q.Answer || "").trim().toUpperCase()) correctCount++;
     });
     const percent = state.allQuestions.length === 0 ? 0 : Math.round((correctCount / state.allQuestions.length) * 100);
     
-    document.getElementById('score-correct').innerText = correctCount;
-    document.getElementById('score-total').innerText = state.allQuestions.length;
-    document.getElementById('score-percentage-label').innerText = `Accuracy: ${percent}%`;
+    const scoreCorrect = document.getElementById('score-correct');
+    const scoreTotal = document.getElementById('score-total');
+    const scorePercent = document.getElementById('score-percentage-label');
+
+    if(scoreCorrect) scoreCorrect.innerText = correctCount;
+    if(scoreTotal) scoreTotal.innerText = state.allQuestions.length;
+    if(scorePercent) scorePercent.innerText = `Accuracy: ${percent}%`;
     
     const reviewContainer = document.getElementById('detailed-review-list-container');
+    if(!reviewContainer) return;
+    reviewContainer.innerHTML = "";
+
     state.allQuestions.forEach((q, idx) => {
         const userAnswer = state.userAnswers[idx];
         const correctAnswer = (q.Answer || "").trim().toUpperCase();
@@ -435,7 +420,7 @@ function renderResults() {
         itemCard.className = `p-5 bg-white dark:bg-slate-900 border ${isCorrect ? 'border-emerald-500/30' : (isSkipped ? 'border-amber-500/30' : 'border-rose-500/30')} rounded-2xl mb-4 shadow-sm`;
         itemCard.innerHTML = `
             <div class="flex items-center justify-between mb-2 border-b border-slate-100 dark:border-slate-800 pb-2"><span class="text-xs font-black text-slate-400">Q ${idx + 1}</span></div>
-            <p class="text-xs font-bold text-slate-800 dark:text-slate-100 mb-4">${q.Question}</p>
+            <p class="text-xs font-bold text-slate-800 dark:text-slate-100 mb-4">${q.Question || q.question}</p>
             <div class="space-y-2 mb-4">
                 <div class="p-3 rounded-xl text-xs bg-emerald-50/40 dark:bg-emerald-950/10 text-emerald-900 dark:text-emerald-300">
                     <span class="text-[10px] uppercase font-black">Correct: ${correctAnswer}</span>
@@ -446,14 +431,14 @@ function renderResults() {
             </div>
             <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800/60">
                 <span class="text-[10px] uppercase font-black tracking-wider text-brand-500 block mb-1">Explanation</span>
-                <p class="text-[11px] font-medium text-slate-600 dark:text-slate-400">${q.Explanation || "No explanation."}</p>
+                <p class="text-[11px] font-medium text-slate-600 dark:text-slate-400">${q.Explanation || q.explanation || "No explanation."}</p>
             </div>
         `;
         reviewContainer.appendChild(itemCard);
     });
-}
+};
 
-function initSwipeGestures() {
+window.initSwipeGestures = () => {
     const card = document.getElementById('quiz-card-container');
     if(!card) return;
     let touchStartX = 0, touchEndX = 0;
@@ -463,7 +448,7 @@ function initSwipeGestures() {
         if (touchStartX - touchEndX > 50) window.changeQuestion(1);
         else if (touchEndX - touchStartX > 50) window.changeQuestion(-1);
     }, { passive: true });
-}
+};
 
 document.addEventListener('keydown', (e) => {
     if(window.location.pathname.includes('quiz.html')) {
@@ -472,4 +457,5 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// Tailwind Setup Injection Rule
 tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' } } } } };
