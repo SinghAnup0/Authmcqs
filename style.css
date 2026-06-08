@@ -1,26 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=400;500;600;700;800&display=swap');
-body { font-family: 'Plus Jakarta Sans', sans-serif; }
+/* Accessibility Scale Adjuster Tokens */
+.scale-text-0 { font-size: 11px !important; line-height: 1.4 !important; }
+.scale-text-1 { font-size: 13px !important; line-height: 1.5 !important; }
+.scale-text-2 { font-size: 15px !important; line-height: 1.5 !important; }
+.scale-text-3 { font-size: 17px !important; line-height: 1.6 !important; }
+.scale-text-4 { font-size: 19px !important; line-height: 1.6 !important; }
 
-@media (min-width: 380px) {
-    .xs\:block { display: block !important; }
+.scale-opt-0 { font-size: 11px !important; }
+.scale-opt-1 { font-size: 12px !important; }
+.scale-opt-2 { font-size: 13px !important; }
+.scale-opt-3 { font-size: 14px !important; }
+.scale-opt-4 { font-size: 15px !important; }
+
+/* Visual Interaction Animations */
+@keyframes slideIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
 }
-
-.custom-scrollbar::-webkit-scrollbar { width: 6px; }
-.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 24px; }
-.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
-
-@keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-.animate-slide-in { animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-
-.scale-text-0 { font-size: 0.875rem; line-height: 1.25rem; } 
-.scale-text-1 { font-size: 1rem; line-height: 1.5rem; }     
-.scale-text-2 { font-size: 1.125rem; line-height: 1.75rem; }
-.scale-text-3 { font-size: 1.25rem; line-height: 1.75rem; } 
-.scale-text-4 { font-size: 1.5rem; line-height: 2rem; }     
-
-.scale-opt-0 { font-size: 0.75rem; }
-.scale-opt-1 { font-size: 0.875rem; }
-.scale-opt-2 { font-size: 1rem; }
-.scale-opt-3 { font-size: 1.125rem; }
-.scale-opt-4 { font-size: 1.25rem; }
+.animate-slide-in {
+    animation: slideIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
