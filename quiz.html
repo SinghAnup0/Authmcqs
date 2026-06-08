@@ -3,113 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced MCQ Engine - Quiz Board</title>
-    
+    <title>Quiz | MCQ Engine</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        
-        @media (min-width: 380px) {
-            .xs\:block { display: block !important; }
-        }
-    
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 24px; }
-        .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
-        
-        @keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-slide-in { animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        
-        .scale-text-0 { font-size: 0.875rem; line-height: 1.25rem; }
-        .scale-text-1 { font-size: 1rem; line-height: 1.5rem; }
-        .scale-text-2 { font-size: 1.125rem; line-height: 1.75rem; }
-        .scale-text-3 { font-size: 1.25rem; line-height: 1.75rem; }
-        .scale-text-4 { font-size: 1.5rem; line-height: 2rem; }
-        
-        .scale-opt-0 { font-size: 0.75rem; }
-        .scale-opt-1 { font-size: 0.875rem; }
-        .scale-opt-2 { font-size: 1rem; }
-        .scale-opt-3 { font-size: 1.125rem; }
-        .scale-opt-4 { font-size: 1.25rem; }
-    </style>
-    
-    <script>
-        tailwind.config = {
-            darkMode: 'class',
-            theme: { extend: { colors: { brand: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' } } } }
-        }
-    </script>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-[#f8fafc] text-slate-900 dark:bg-[#0b0f19] dark:text-slate-100 min-h-screen flex flex-col transition-colors duration-300 overflow-x-hidden">
+    
+    <div id="global-loader" class="hidden fixed inset-0 bg-slate-950/20 backdrop-blur-xs flex items-center justify-center z-50">
+        <div class="w-10 h-10 border-4 border-brand-500 border-t-transparent rounded-full animate-spin"></div>
+    </div>
 
-    <nav class="sticky top-0 z-40 bg-white/80 dark:bg-[#111827]/80 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800/80 transition-colors">
-        <div class="max-w-7xl mx-auto px-3 sm:px-4 h-14 flex items-center justify-between gap-2">
-            
-            <div class="flex items-center gap-1.5 sm:gap-3 shrink-0">
-                <div class="flex items-center gap-1.5 cursor-pointer select-none" onclick="clearAndGoHome()">
-                    <span class="font-extrabold text-xs sm:text-sm tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-1">
-                        ExamPrep <span class="text-brand-600 dark:text-brand-400 font-medium text-[10px] sm:text-xs">AI Engine</span>
-                    </span>
-                </div>
-            </div>
+    <header class="w-full bg-white dark:bg-slate-900 border-b border-slate-200/60 dark:border-slate-800/60 sticky top-0 z-40">
+        <div class="max-w-5xl w-full mx-auto px-4 h-14 flex items-center justify-between gap-4">
+            <button onclick="window.goBackToChaptersList()" class="w-8 h-8 rounded-lg border border-slate-200 dark:border-slate-800 flex items-center justify-center hover:bg-slate-100 dark:hover:bg-slate-900 text-slate-500 shrink-0">
+                <i class="fa-solid fa-arrow-left text-xs"></i>
+            </button>
 
-            <div class="flex items-center gap-1 sm:gap-2">
-                <div class="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200/40 dark:border-slate-800/40 rounded-xl p-0.5 shadow-sm">
-                    <button onclick="window.changeFontSize(-1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[10px] font-extrabold text-slate-500 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center transition-all">A-</button>
+            <div class="flex items-center gap-1.5 sm:gap-2">
+                <div class="flex items-center bg-slate-50 dark:bg-slate-950 border border-slate-200/40 dark:border-slate-800/40 rounded-xl p-0.5 shadow-xs">
+                    <button onclick="window.changeFontSize(-1)" class="w-7 h-7 rounded-lg text-[10px] font-extrabold text-slate-500 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center transition-all">A-</button>
                     <span class="w-[1px] h-3 bg-slate-200 dark:bg-slate-800"></span>
-                    <button onclick="window.changeFontSize(1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[10px] font-extrabold text-slate-500 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center transition-all">A+</button>
+                    <button onclick="window.changeFontSize(1)" class="w-7 h-7 rounded-lg text-[10px] font-extrabold text-slate-500 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center transition-all">A+</button>
                 </div>
 
-                <div class="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200/40 dark:border-slate-800/40 rounded-xl p-0.5 shadow-sm">
-                    <button id="lang-btn-en" onclick="event.stopPropagation(); window.toggleLanguage('en')" class="px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black transition-all">EN</button>
+                <div class="flex items-center bg-slate-50 dark:bg-slate-950 border border-slate-200/40 dark:border-slate-800/40 rounded-xl p-0.5 shadow-xs">
+                    <button id="lang-btn-en" onclick="window.toggleLanguage('en')" class="px-2 h-7 rounded-lg text-[10px] font-black transition-all">EN</button>
                     <span class="w-[1px] h-3 bg-slate-200 dark:bg-slate-800"></span>
-                    <button id="lang-btn-hi" onclick="event.stopPropagation(); window.toggleLanguage('hi')" class="px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black transition-all">HI</button>
+                    <button id="lang-btn-hi" onclick="window.toggleLanguage('hi')" class="px-2 h-7 rounded-lg text-[10px] font-black transition-all">HI</button>
                 </div>
 
-                <button id="silent-btn" onclick="window.toggleHaptics()" class="h-8 w-8 rounded-xl text-xs font-bold flex items-center justify-center transition-all border border-transparent shadow-sm"></button>
-
-                <button onclick="window.toggleDarkMode()" class="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-500 border border-slate-200/40 dark:border-slate-800/40 flex items-center justify-center transition-all shadow-sm">
+                <button id="silent-btn" onclick="window.toggleHaptics()" class="h-8 w-8 rounded-xl text-xs font-bold flex items-center justify-center transition-all border border-transparent shadow-xs"></button>
+                <button onclick="window.toggleDarkMode()" class="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-950 text-slate-500 border border-slate-200/40 dark:border-slate-800/40 flex items-center justify-center shadow-xs">
                     <i id="theme-icon" class="fa-solid fa-moon text-xs"></i>
                 </button>
             </div>
         </div>
-    </nav>
+    </header>
 
     <div class="flex-1 max-w-5xl w-full mx-auto px-4 py-8 relative">
-        
-        <div id="global-loader" class="hidden absolute inset-0 bg-[#f8fafc]/60 dark:bg-[#0b0f19]/60 backdrop-blur-sm z-50 flex items-center justify-center">
-            <div class="flex flex-col items-center gap-3 bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-xl border border-slate-100 dark:border-slate-800">
-                <div class="w-9 h-9 border-4 border-brand-500/20 border-t-brand-600 rounded-full animate-spin"></div>
-                <span class="text-xs font-semibold text-slate-500 dark:text-slate-400">Syncing database node...</span>
-            </div>
-        </div>
-
-        <section id="view-quiz" class="grid grid-cols-1 lg:grid-cols-3 gap-8 animate-slide-in">
+        <section id="view-quiz" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div class="lg:col-span-2 space-y-6">
                 <div id="quiz-card-container" class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 p-6 rounded-3xl shadow-sm space-y-5 touch-pan-y">
-                    
                     <div class="flex items-center justify-between text-xs font-bold text-slate-400 dark:text-slate-500">
-                        <span id="quiz-chapter-indicator" class="truncate pr-4">CHAPTER LOAD TRACK</span>
+                        <span id="quiz-chapter-indicator" class="truncate pr-4">CHAPTER SEGMENT</span>
                         <span id="quiz-question-counter" class="bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md text-brand-600 dark:text-brand-400 whitespace-nowrap">Q 0/0</span>
                     </div>
 
                     <div class="flex items-center justify-between bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl border border-slate-100 dark:border-slate-800/60 -mt-2">
                         <div class="flex items-center gap-5 text-xs font-bold">
-                            <span class="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 bg-emerald-100/50 dark:bg-emerald-950/40 px-2 py-1 rounded-lg">
-                                <i class="fa-solid fa-check text-[10px]"></i> <span id="score-live-correct">0</span>
-                            </span>
-                            <span class="flex items-center gap-1.5 text-rose-600 dark:text-rose-400 bg-rose-100/50 dark:bg-rose-950/40 px-2 py-1 rounded-lg">
-                                <i class="fa-solid fa-xmark text-[10px]"></i> <span id="score-live-wrong">0</span>
-                            </span>
-                            <span class="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 bg-slate-200/50 dark:bg-slate-700/40 px-2 py-1 rounded-lg">
-                                <i class="fa-solid fa-forward-step text-[10px]"></i> <span id="score-live-skipped">0</span>
-                            </span>
+                            <span class="flex items-center gap-1.5 text-emerald-600"><i class="fa-solid fa-check"></i> <span id="score-live-correct">0</span></span>
+                            <span class="flex items-center gap-1.5 text-rose-600"><i class="fa-solid fa-xmark"></i> <span id="score-live-wrong">0</span></span>
+                            <span class="flex items-center gap-1.5 text-slate-500"><i class="fa-solid fa-forward-step"></i> <span id="score-live-skipped">0</span></span>
                         </div>
-                        <div class="flex items-center gap-1.5 text-brand-600 dark:text-brand-400 font-extrabold text-xs bg-brand-50 dark:bg-brand-950/30 px-2.5 py-1 rounded-lg">
+                        <div class="flex items-center gap-1.5 text-brand-600 font-extrabold text-xs px-2.5 py-1 rounded-lg">
                             <i class="fa-solid fa-crosshairs text-[10px]"></i> <span id="score-live-percent">0</span>%
                         </div>
                     </div>
@@ -119,70 +66,37 @@
                     </div>
 
                     <div class="space-y-4 pt-1">
-                        <div id="exam-source-indicator" class="hidden inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 text-[10px] font-bold uppercase tracking-wider mb-2 border border-indigo-100 dark:border-indigo-900/50">
-                            <i class="fa-solid fa-bookmark"></i> <span id="exam-source-text"></span>
-                        </div>
-                        
-                        <h3 id="question-text" class="font-bold text-slate-900 dark:text-slate-100 scale-text-1 transition-all duration-200">Loading evaluation criteria...</h3>
+                        <h3 id="question-text" class="font-bold text-slate-900 dark:text-slate-100 scale-text-1">Loading assessment questions...</h3>
                         <div id="options-container" class="space-y-3 pt-2"></div>
                     </div>
 
                     <div class="flex items-center justify-between pt-4 border-t border-slate-100 dark:border-slate-800/60 gap-2 flex-wrap">
                         <button onclick="window.changeQuestion(-1)" class="px-4 py-2 text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 rounded-xl transition-all"><i class="fa-solid fa-chevron-left text-[10px]"></i> Prev</button>
                         <div class="flex items-center gap-2">
-                            <button onclick="window.toggleExplanation()" class="px-4 py-2 text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200/60 rounded-xl transition-all"><i class="fa-solid fa-lightbulb"></i> Analysis</button>
+                            <button onclick="window.toggleExplanation()" class="px-4 py-2 text-xs font-bold text-amber-700 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 border border-amber-200/60 dark:border-amber-900/30 rounded-xl transition-all"><i class="fa-solid fa-lightbulb"></i> Analysis</button>
                             <button onclick="window.changeQuestion(1)" class="px-4 py-2 text-xs font-bold text-white bg-brand-600 rounded-xl transition-all">Next <i class="fa-solid fa-chevron-right text-[10px]"></i></button>
                         </div>
                     </div>
                 </div>
 
-                <div id="explanation-panel" class="hidden bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 p-6 rounded-3xl animate-slide-in">
-                    <h4 class="text-xs font-extrabold text-emerald-800 dark:text-emerald-400 flex items-center gap-2 uppercase tracking-wider mb-2"><i class="fa-solid fa-circle-info"></i> Detailed Solution Matrix</h4>
-                    <p id="explanation-text" class="text-xs leading-relaxed font-medium text-slate-600 dark:text-slate-300 scale-text-0 transition-all duration-200"></p>
+                <div id="explanation-panel" class="hidden bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 p-6 rounded-3xl">
+                    <h4 class="text-xs font-extrabold text-emerald-800 dark:text-emerald-400 mb-2"><i class="fa-solid fa-circle-info"></i> Solution Commentary Matrix</h4>
+                    <p id="explanation-text" class="text-xs leading-relaxed font-medium text-slate-600 dark:text-slate-300"></p>
                 </div>
             </div>
 
             <div class="space-y-6">
                 <div class="bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 p-5 rounded-3xl shadow-sm space-y-4">
                     <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/60 pb-3">
-                        <h4 class="text-xs font-extrabold text-slate-400 uppercase tracking-wider">Evaluation Index</h4>
-                        <button onclick="submitQuizEvaluationReport()" class="px-3 py-1.5 bg-rose-50 border border-rose-100 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/30 dark:border-rose-900/40 dark:text-rose-400 text-[11px] font-bold rounded-lg transition-all">End Review</button>
+                        <h4 class="text-xs font-extrabold text-slate-400">Evaluation Index</h4>
+                        <button onclick="window.submitQuizEvaluationReport()" class="px-3 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400 font-bold rounded-xl text-[10px] transition-all">End Test</button>
                     </div>
-                    <div id="question-matrix-grid" class="grid grid-cols-5 gap-2 max-h-[260px] overflow-y-auto custom-scrollbar pr-1"></div>
+                    <div id="question-matrix-grid" class="grid grid-cols-5 gap-2 max-h-64 overflow-y-auto pr-1"></div>
                 </div>
             </div>
         </section>
-
-        <section id="view-results" class="hidden max-w-4xl mx-auto px-4 py-6">
-            <div class="bg-gradient-to-br from-brand-600 to-indigo-700 rounded-3xl p-6 text-white shadow-xl mb-6 text-center">
-                <h3 class="text-xl font-black tracking-tight mb-2">Evaluation Analytics Complete!</h3>
-                <p class="text-xs font-medium text-brand-100 mb-4">Detailed Performance Breakdown Matrix</p>
-                
-                <div class="inline-flex items-center justify-center bg-white/10 backdrop-blur-md rounded-2xl px-6 py-3 border border-white/10">
-                    <span class="text-3xl font-black" id="score-correct">0</span>
-                    <span class="mx-2 text-xl font-bold opacity-50">/</span>
-                    <span class="text-2xl font-bold text-brand-200" id="score-total">0</span>
-                </div>
-                <p class="text-xs font-bold text-emerald-200 mt-3" id="score-percentage-label">Accuracy: 0%</p>
-            </div>
-
-            <div class="flex gap-3 mb-6">
-                <button onclick="clearAndGoHome()" class="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800 shadow-sm flex items-center justify-center gap-2 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all">
-                    <i class="fa-solid fa-house"></i> Home Screen
-                </button>
-                <button onclick="goBackToChaptersList()" class="flex-1 py-3 px-4 rounded-xl text-xs font-bold bg-brand-600 hover:bg-brand-700 text-white shadow-md shadow-brand-500/10 flex items-center justify-center gap-2 transition-all">
-                    <i class="fa-solid fa-book-open"></i> Other Chapters
-                </button>
-            </div>
-
-            <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-2">
-                <i class="fa-solid fa-list-check text-brand-500"></i> Item-by-Item Review Audit
-            </h4>
-            <div id="detailed-review-list-container" class="space-y-4"></div>
-        </section>
-
     </div>
 
-    <script src="app.js"></script>
+    <script type="module" src="app.js"></script>
 </body>
 </html>
