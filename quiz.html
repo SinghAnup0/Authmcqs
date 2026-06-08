@@ -39,9 +39,9 @@
                 <button onclick="changeFontSize(1)" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg text-[10px] font-extrabold text-slate-500 hover:bg-white dark:hover:bg-slate-800 flex items-center justify-center transition-all">A+</button>
             </div>
             <div class="flex items-center bg-slate-50 dark:bg-slate-900 border border-slate-200/40 dark:border-slate-800/40 rounded-xl p-0.5 shadow-sm">
-                <button id="lang-btn-en" onclick="toggleLanguage('en')" class="px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black transition-all">EN</button>
+                <button id="lang-btn-en" onclick="event.stopPropagation(); toggleLanguage('en')" class="px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black transition-all">EN</button>
                 <span class="w-[1px] h-3 bg-slate-200 dark:bg-slate-800"></span>
-                <button id="lang-btn-hi" onclick="toggleLanguage('hi')" class="px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black transition-all">HI</button>
+                <button id="lang-btn-hi" onclick="event.stopPropagation(); toggleLanguage('hi')" class="px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black transition-all">HI</button>
             </div>
             <button id="silent-btn" onclick="toggleHaptics()" class="h-8 w-8 sm:w-auto sm:px-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1 transition-all border border-transparent shadow-sm"></button>
             <button onclick="toggleDarkMode()" class="w-8 h-8 rounded-xl bg-slate-50 dark:bg-slate-900 text-slate-500 border border-slate-200/40 dark:border-slate-800/40 flex items-center justify-center transition-all shadow-sm active:scale-95"><i id="theme-icon" class="fa-solid fa-moon text-xs"></i></button>
