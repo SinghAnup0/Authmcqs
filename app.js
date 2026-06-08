@@ -144,15 +144,42 @@ window.applyFontSize = () => {
 };
 
 window.toggleLanguage = (lang, fetchNewData = true) => {
-    lang = lang || (state.lang === 'en' ? 'hi' : 'en');
-    state.lang = lang; window.saveState();
-    
-    const btnEn = document.getElementById('lang-btn-en');
-    const btnHi = document.getElementById('lang-btn-hi');
-    if(btnHi && btnEn) {
-        btnHi.className = lang === 'hi' ? "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black bg-brand-600 text-white" : "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
-        btnEn.className = lang === 'en' ? "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black bg-brand-600 text-white" : "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
-    }
+            if (!lang) {
+                lang = state.lang === 'en' ? 'hi' : 'en';
+            }
+            if (lang !== 'en' && lang !== 'hi') return;
+            state.lang = lang;
+            saveState();
+            
+            const btnEn = document.getElementById('lang-btn-en');
+            const btnHi = document.getElementById('lang-btn-hi');
+            
+            if (state.lang === 'hi') {
+                if(btnHi) btnHi.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm";
+                if(btnEn) btnEn.className = "px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
+            } else {
+                if(btnEn) btnEn.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm";
+                if(btnHi) btnHi.className = "px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
+            }
+
+            executeMatrixDiagnosticDebugger("UI Cross Language Action: Language Matrix Mutation Hook Captured", { selectedLanguage: state.lang, pipelineRemoteSync: fetchNewData });
+
+            if(fetchNewData) {
+                triggerHapticFeedback(20);
+                
+                const isViewingQuiz = !document.getElementById('view-quiz').classList.contains('hidden');
+                const isViewingChapters = !document.getElementById('view-chapters').classList.contains('hidden');
+
+                if (isViewingQuiz && state.activeSubject && state.activeChapter) {
+                    launchQuizEvaluationEngine(state.activeChapter, state.activeChapterIndex, true);
+                } else if (isViewingChapters && state.activeSubject) {
+                    loadChapters();
+                } else {
+                    clearQuizState();
+                    loadSubjects();
+                }
+            }
+            
     if(fetchNewData) window.location.reload(); 
 };
 
