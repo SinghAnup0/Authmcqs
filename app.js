@@ -118,7 +118,7 @@ function loadState() {
 }
 
 function clearQuizState() {
-    state.activeSubject = ""; state.activeChapter = ""; state.activeChapterIndex = 0;
+    state.activeSubject = ""; state.activeChapter = ""; state.activeChapterIndex = 0;state.userEmail = "";
     state.allQuestions = []; state.currentQuestionIndex = 0; state.userAnswers = {};
     saveState();
 }
@@ -333,15 +333,6 @@ function launchQuizEvaluationEngine(chapterName, chapterIdx, isLanguageSwitch = 
         })
         .catch(err => alert("Secure Database Connection Lost."))
         .finally(() => hideLoader());
-}
-
-// Helper utility to wipe local data configurations clear
-function clearQuizState() {
-    state.userEmail = "";
-    state.activeSubject = null;
-    state.activeChapter = null;
-    state.allQuestions = [];
-    saveState();
 }
 
 
