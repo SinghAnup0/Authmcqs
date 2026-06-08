@@ -39,7 +39,9 @@ onAuthStateChanged(auth, (user) => {
         if (img) { img.src = user.photoURL; img.classList.remove('hidden'); }
         if (name) name.textContent = user.displayName;
         if (email) email.textContent = user.email;
-
+        
+        if (email) state.userEmail = user.email;
+      
         if (isAuthPage) window.location.href = 'subjects.html';
     } else {
         if (!isAuthPage) window.location.href = 'index.html';
@@ -306,7 +308,7 @@ function launchQuizEvaluationEngine(chapterName, chapterIdx, isLanguageSwitch = 
     const panel = document.getElementById('explanation-panel');
     if(panel) panel.classList.add('hidden');
 
-    const endpointUrl = `${API_URL}?action=getFullChapterData&sheetName=${encodeURIComponent(state.activeSubject)}&chapterName=${encodeURIComponent(chapterName)}&chapterIndex=${state.activeChapterIndex}&lang=${state.lang}`;
+    const endpointUrl = `${API_URL}?action=getFullChapterData&sheetName=${encodeURIComponent(state.activeSubject)}&chapterName=${encodeURIComponent(chapterName)}&chapterIndex=${state.activeChapterIndex}&lang=${state.lang}&userEmail=${encodeURIComponent(state.userEmail)}`;
     executeMatrixDiagnosticDebugger("Networking Pipeline Hook: Fetching Complete Target Questions Stream Node Packet", { url: endpointUrl, chapterIndex: state.activeChapterIndex, languageToggleAction: isLanguageSwitch });
 
     fetch(endpointUrl)
