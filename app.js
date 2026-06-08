@@ -372,7 +372,7 @@ function toggleLanguage(lang, fetchNewData = true) {
 }
 window.toggleLanguage = toggleLanguage;
 
-function launchQuizEvaluationEngine(chapterName, chapterIdx, isLanguageSwitch = false) {
+function launchQuizEvaluationEngines(chapterName, chapterIdx, isLanguageSwitch = false) {
     state.activeChapterIndex = chapterIdx !== undefined ? chapterIdx : state.activeChapterIndex;
     
     if (!isLanguageSwitch) {
