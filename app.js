@@ -196,60 +196,147 @@ window.updateHapticsUI = () => {
 };
 
 // --- DATA FETCHING & ENGINE MERGE ---
-function loadSubjects() {
-  window.showLoader();
-    fetch(`${API_URL}?action=getSubjects&lang=${state.lang}`)
+// -----------------------------------------------------------------
+// REMOTE NETWORK DATA FETCHING PIPELINE DATA ENGINE HOOKS
+// -----------------------------------------------------------------
+
+/**
+ * Pulls the master list of available subject track keys from the endpoint.
+ */
+export function loadSubjects() {
+    showLoader();
+    
+    const subjectTranslations = {
+        "History": "इतिहास", 
+        "Polity": "राजव्यवस्था", 
+        "Computer": "कंप्यूटर",
+        "UP GK": "उत्तर प्रदेश सामान्य ज्ञान", 
+        "Economic & Social Development": "आर्थिक और सामाजिक विकास",
+        "Geography": "भूगोल", 
+        "Environment & Ecology": "पर्यावरण और पारिस्थितिकी"
+    };
+
+    const endpointUrl = `${API_URL}?action=getSubjects&lang=${state.lang}`;
+    executeMatrixDiagnosticDebugger("Networking Pipeline Hook: Fetching Subject Index Profiles", { url: endpointUrl });
+
+    fetch(endpointUrl)
         .then(res => res.json())
         .then(data => {
+            executeMatrixDiagnosticDebugger("Networking Response Received: Subject Track Arrays Package", { rawPayloadReceived: data });
             const container = document.getElementById('subjects-container');
-            if(!container) return;
+            const sidebarContainer = document.getElementById('sidebar-subjects-container');
+            if(!container || !sidebarContainer) return;
+            
             container.innerHTML = "";
+            sidebarContainer.innerHTML = "";
+            
+            if (data.error || !Array.isArray(data) || data.length === 0) {
+                const fallbackMsg = `<p class="text-xs font-semibold text-center text-rose-500 py-8 col-span-full">⚠️ No matching structural database logs found.</p>`;
+                container.innerHTML = fallbackMsg;
+                sidebarContainer.innerHTML = fallbackMsg;
+                return;
+            }
+
             data.forEach(sub => {
+                const cleanKey = sub.trim();
+                let displayName = sub;
+                if (state.lang === 'hi') {
+                    displayName = subjectTranslations[sub] || subjectTranslations[cleanKey] || sub;
+                }
+
+                // Append Card Elements To Central Grid Workspace Container
                 const el = document.createElement('div');
-                el.className = "p-5 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer hover:border-brand-500/40 group";
-                el.onclick = () => { window.triggerHapticFeedback(15); state.activeSubject = sub; window.saveState(); window.location.href = 'chapters.html'; };
+                el.className = "p-5 bg-white dark:bg-slate-900 border border-slate-200/60 dark:border-slate-800/60 rounded-2xl shadow-sm flex items-center justify-between cursor-pointer hover:border-brand-500/40 group transition-all duration-200 active:scale-[0.99]";
+                el.onclick = () => { triggerHapticFeedback(15); selectSubjectTrack(sub); };
                 el.innerHTML = `
                     <div class="flex items-center gap-4">
-                        <div class="w-11 h-11 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 flex items-center justify-center font-bold text-base shadow-sm">${sub.charAt(0).toUpperCase()}</div>
-                        <div><h4 class="font-bold text-sm text-slate-800 dark:text-slate-200">${sub}</h4></div>
+                        <div class="w-11 h-11 rounded-xl bg-brand-50 dark:bg-brand-950/40 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-base shadow-sm group-hover:bg-brand-600 group-hover:text-white transition-colors">
+                            ${displayName.charAt(0).toUpperCase()}
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-sm text-slate-800 dark:text-slate-200 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">${displayName}</h4>
+                            <p class="text-[11px] font-semibold text-slate-400 mt-0.5">Explore Specializations Matrix</p>
+                        </div>
                     </div>
-                    <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:translate-x-0.5 transition-transform"></i>`;
+                    <i class="fa-solid fa-chevron-right text-xs text-slate-300 dark:text-slate-700 group-hover:translate-x-0.5 transition-transform"></i>
+                `;
                 container.appendChild(el);
-            });
-        }).catch(err => alert("Connection Lost: Failed to load modules."))
-        .finally(() => window.hideLoader());
-}
-function loadChapters() {
 
-  if(!state.activeSubject) { window.location.href = 'subjects.html'; return; }
-    window.showLoader();
-    const titleNode = document.getElementById('current-subject-title');
-    if(titleNode) titleNode.innerText = state.activeSubject.replace(/\.json$/i, '');
-    
-    fetch(`${API_URL}?action=getChapters&sheetName=${encodeURIComponent(state.activeSubject)}&lang=${state.lang}`)
+                // Append Link Button Elements To Dynamic Slide-out Sidebar List Layout
+                const sideEl = document.createElement('button');
+                sideEl.className = "w-full text-left p-3 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center justify-between group transition-all";
+                sideEl.onclick = () => { toggleSidebar(); selectSubjectTrack(sub); };
+                sideEl.innerHTML = `
+                    <div class="flex items-center gap-2.5">
+                        <span class="w-2 h-2 rounded-full bg-brand-500 group-hover:scale-125 transition-transform"></span>
+                        <span class="truncate max-w-[180px]">${displayName}</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 group-hover:text-brand-500 group-hover:translate-x-0.5 transition-all"></i>
+                `;
+                sidebarContainer.appendChild(sideEl);
+            });
+            
+            if(document.getElementById('view-chapters').classList.contains('hidden') && (!document.getElementById('view-quiz') || document.getElementById('view-quiz').classList.contains('hidden'))) {
+                navigateTo('subjects');
+            }
+        })
+        .catch(err => showNetworkError(err))
+        .finally(() => hideLoader());
+}
+
+/**
+ * Sets the selected subject string value and triggers the corresponding chapter loader function.
+ * @param {string} subjectName Target database filename identifier record mapping string.
+ */
+export function selectSubjectTrack(subjectName) {
+    state.activeSubject = subjectName;
+    const heading = document.getElementById('current-subject-title');
+    if(heading) heading.innerText = subjectName.replace(/\.json$/i, '');
+    loadChapters();
+}
+
+/**
+ * Queries the endpoint for available chapter subdivisions belonging to the selected subject tracking key.
+ */
+export function loadChapters() {
+    showLoader();
+    const heading = document.getElementById('current-subject-title');
+    if(heading && state.activeSubject) heading.innerText = state.activeSubject.replace(/\.json$/i, '');
+
+    const endpointUrl = `${API_URL}?action=getChapters&sheetName=${encodeURIComponent(state.activeSubject)}&lang=${state.lang}`;
+    executeMatrixDiagnosticDebugger("Networking Pipeline Hook: Fetching Sub-Specialization Chapter Collections", { url: endpointUrl });
+
+    fetch(endpointUrl)
         .then(res => res.json())
         .then(data => {
+            executeMatrixDiagnosticDebugger("Networking Response Received: Chapters Context Profiles Data", { rawPayloadReceived: data });
             const container = document.getElementById('chapters-container');
             if(!container) return;
             container.innerHTML = "";
+
+            if (data.error || !Array.isArray(data) || data.length === 0) {
+                container.innerHTML = `<p class="text-xs font-semibold text-center text-slate-500 py-6">No available operational chapters discovered for this target block.</p>`;
+                return;
+            }
+
             data.forEach((chap, idx) => {
                 const el = document.createElement('div');
-                el.className = "p-4 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-xl flex items-center justify-between cursor-pointer hover:border-brand-500/30";
-                el.onclick = () => { 
-                    window.triggerHapticFeedback(20); 
-                    state.activeChapter = chap; state.activeChapterIndex = idx; 
-                    state.allQuestions = []; state.currentQuestionIndex = 0; state.userAnswers = {};
-                    window.saveState(); window.location.href = 'quiz.html'; 
-                };
+                el.className = "p-4 bg-white dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/50 rounded-xl flex items-center justify-between cursor-pointer hover:border-brand-500/30 transition-all active:scale-[0.995]";
+                el.onclick = () => { triggerHapticFeedback(20); launchQuizEvaluationEngine(chap, idx); };
                 el.innerHTML = `
-                    <div class="flex items-center gap-3"><span class="text-xs font-bold text-slate-400 w-5">${idx + 1}.</span><span class="text-xs font-bold text-slate-700 dark:text-slate-300">${chap}</span></div>
-                    <i class="fa-solid fa-play text-[10px] text-brand-500 bg-brand-50 dark:bg-brand-950/40 p-2 rounded-lg"></i>`;
+                    <div class="flex items-center gap-3">
+                        <span class="text-xs font-bold text-slate-400 w-5">${idx + 1}.</span>
+                        <span class="text-xs font-bold text-slate-700 dark:text-slate-300">${chap}</span>
+                    </div>
+                    <i class="fa-solid fa-play text-[10px] text-brand-500 bg-brand-50 dark:bg-brand-950/40 p-2 rounded-lg"></i>
+                `;
                 container.appendChild(el);
             });
-        }).catch(err => alert("Connection Lost: Failed to parse structural items."))
-        .finally(() => window.hideLoader());
+            navigateTo('chapters');
+        })
+        .catch(err => showNetworkError(err))
+        .finally(() => hideLoader());
 }
-
 function toggleLanguage(lang, fetchNewData = true) {
     if (!lang) {
         lang = state.lang === 'en' ? 'hi' : 'en';
