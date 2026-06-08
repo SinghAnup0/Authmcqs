@@ -1,0 +1,26 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=400;500;600;700;800&display=swap');
+body { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+@media (min-width: 380px) {
+    .xs\:block { display: block !important; }
+}
+
+.custom-scrollbar::-webkit-scrollbar { width: 6px; }
+.custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 24px; }
+.dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; }
+
+@keyframes slideIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+.animate-slide-in { animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+
+.scale-text-0 { font-size: 0.875rem; line-height: 1.25rem; } 
+.scale-text-1 { font-size: 1rem; line-height: 1.5rem; }     
+.scale-text-2 { font-size: 1.125rem; line-height: 1.75rem; }
+.scale-text-3 { font-size: 1.25rem; line-height: 1.75rem; } 
+.scale-text-4 { font-size: 1.5rem; line-height: 2rem; }     
+
+.scale-opt-0 { font-size: 0.75rem; }
+.scale-opt-1 { font-size: 0.875rem; }
+.scale-opt-2 { font-size: 1rem; }
+.scale-opt-3 { font-size: 1.125rem; }
+.scale-opt-4 { font-size: 1.25rem; }
