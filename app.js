@@ -17,21 +17,26 @@ const provider = new GoogleAuthProvider();
 
 // --- APP STATE & CONSTANTS ---
 const API_URL = "https://script.google.com/macros/s/AKfycbzznHUO9JjcyNwbh3xKv_LmOiszD9Sj3RiHJnjJp_SvhOHHTffzLsXwQjdBxx2mbGD8/exec";
-const DEBUG_MODE = false;
 
 let state = {
-    lang: "en", haptics: true, fontSizeIndex: 1, 
-    activeSubject: "", activeChapter: "", activeChapterIndex: 0, 
-    allQuestions: [], currentQuestionIndex: 0, userAnswers: {} 
+    lang: "en", 
+    haptics: true, 
+    fontSizeIndex: 1, 
+    activeSubject: "", 
+    activeChapter: "", 
+    activeChapterIndex: 0, 
+    allQuestions: [], 
+    currentQuestionIndex: 0, 
+    userAnswers: {} 
 };
 
-// --- AUTHENTICATION LOGIC ---
+// --- AUTHENTICATION MONITORING ---
 onAuthStateChanged(auth, (user) => {
     const path = window.location.pathname;
     const isAuthPage = path.includes('index.html') || path === '/' || path.endsWith('/');
 
     if (user) {
-        // Populate Sidebar Profile
+        // Update Sidebar/Header Profile details across pages if elements exist
         const img = document.getElementById('sidebar-user-img');
         const name = document.getElementById('sidebar-user-name');
         const email = document.getElementById('sidebar-user-email');
@@ -47,16 +52,24 @@ onAuthStateChanged(auth, (user) => {
 });
 
 window.loginUser = async () => {
-    try { await signInWithPopup(auth, provider); } 
-    catch (error) { console.error("Login Error:", error); alert("Login Failed: " + error.message); }
+    try { 
+        await signInWithPopup(auth, provider); 
+    } catch (error) { 
+        console.error("Login Error:", error); 
+        alert("Login Failed: " + error.message); 
+    }
 };
 
 window.logoutUser = async () => {
-    try { await signOut(auth); window.clearQuizState(); } 
-    catch (error) { console.error("Logout Error:", error); }
+    try { 
+        await signOut(auth); 
+        window.clearQuizState(); 
+    } catch (error) { 
+        console.error("Logout Error:", error); 
+    }
 };
 
-// --- ROUTER & INITIALIZATION ---
+// --- APPLICATION INITIALIZATION & ROUTER ---
 document.addEventListener("DOMContentLoaded", () => {
     window.loadState();
     window.initSystemTheme();
@@ -72,8 +85,10 @@ document.addEventListener("DOMContentLoaded", () => {
     window.initSwipeGestures();
 });
 
-// --- CORE FUNCTIONS (Explicitly Bound to Window Space for Layout Context) ---
-window.saveState = () => { localStorage.setItem('mcq_engine_state', JSON.stringify(state)); };
+// --- ENGINE STATE MANAGERS (Explicitly Bound to Global Window Context) ---
+window.saveState = () => { 
+    localStorage.setItem('mcq_engine_state', JSON.stringify(state)); 
+};
 
 window.loadState = () => {
     const saved = localStorage.getItem('mcq_engine_state');
@@ -85,12 +100,16 @@ window.loadState = () => {
 };
 
 window.clearQuizState = () => {
-    state.activeSubject = ""; state.activeChapter = ""; state.activeChapterIndex = 0;
-    state.allQuestions = []; state.currentQuestionIndex = 0; state.userAnswers = {};
+    state.activeSubject = ""; 
+    state.activeChapter = ""; 
+    state.activeChapterIndex = 0;
+    state.allQuestions = []; 
+    state.currentQuestionIndex = 0; 
+    state.userAnswers = {};
     window.saveState();
 };
 
-// UI Controllers
+// --- GLOBAL UI HANDLERS ---
 window.showLoader = () => { const l = document.getElementById('global-loader'); if(l) l.classList.remove('hidden'); };
 window.hideLoader = () => { const l = document.getElementById('global-loader'); if(l) l.classList.add('hidden'); };
 
@@ -124,15 +143,17 @@ window.initSystemTheme = () => {
     }
 };
 
-// Navigation & Actions
+// --- NAVIGATION CORE ---
 window.clearAndGoHome = () => { window.triggerHapticFeedback(15); window.clearQuizState(); window.location.href = 'subjects.html'; };
 window.goBackToSubjects = () => { window.triggerHapticFeedback(10); window.location.href = 'subjects.html'; };
 window.goBackToChaptersList = () => { window.triggerHapticFeedback(15); state.allQuestions = []; state.currentQuestionIndex = 0; state.userAnswers = {}; window.saveState(); window.location.href = 'chapters.html'; };
 
+// --- INTERACTIVE CONFIGURATION CONTROLLERS ---
 window.changeFontSize = (step) => {
     window.triggerHapticFeedback(10);
     state.fontSizeIndex = Math.max(0, Math.min(4, state.fontSizeIndex + step));
-    window.saveState(); window.applyFontSize();
+    window.saveState(); 
+    window.applyFontSize();
 };
 
 window.applyFontSize = () => {
@@ -146,7 +167,8 @@ window.applyFontSize = () => {
 
 window.toggleLanguage = (lang, fetchNewData = true) => {
     lang = lang || (state.lang === 'en' ? 'hi' : 'en');
-    state.lang = lang; window.saveState();
+    state.lang = lang; 
+    window.saveState();
     
     const btnEn = document.getElementById('lang-btn-en');
     const btnHi = document.getElementById('lang-btn-hi');
@@ -155,14 +177,12 @@ window.toggleLanguage = (lang, fetchNewData = true) => {
         btnEn.className = lang === 'en' ? "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black bg-brand-600 text-white shadow-sm" : "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
     }
     
-    // FIXED: Instead of window.location.reload() which wipes temporary state parameters, 
-    // dynamically reload backend layout data for the current active view.
+    // Inline data refetch mirroring indexold1.html logic without destroying active application variables
     if(fetchNewData) {
         const path = window.location.pathname;
         if (path.includes('subjects.html')) window.loadSubjects();
         if (path.includes('chapters.html')) window.loadChapters();
         if (path.includes('quiz.html')) {
-            // Force clearing old downloaded tracks so fresh translated objects load down safely
             state.allQuestions = []; 
             window.saveState();
             window.fetchQuizDataAndRender();
@@ -184,7 +204,7 @@ window.updateHapticsUI = () => {
     }
 };
 
-// --- DATA FETCHING & RENDERING ---
+// --- DATA SERVICES AND CONTENT RENDERING ---
 window.loadSubjects = () => {
     window.showLoader();
     fetch(`${API_URL}?action=getSubjects&lang=${state.lang}`)
@@ -205,7 +225,8 @@ window.loadSubjects = () => {
                     <i class="fa-solid fa-chevron-right text-xs text-slate-300 group-hover:translate-x-0.5 transition-transform"></i>`;
                 container.appendChild(el);
             });
-        }).finally(() => window.hideLoader());
+        }).catch(err => alert("Connection Lost: Failed to load modules."))
+        .finally(() => window.hideLoader());
 };
 
 window.loadChapters = () => {
@@ -234,7 +255,8 @@ window.loadChapters = () => {
                     <i class="fa-solid fa-play text-[10px] text-brand-500 bg-brand-50 dark:bg-brand-950/40 p-2 rounded-lg"></i>`;
                 container.appendChild(el);
             });
-        }).finally(() => window.hideLoader());
+        }).catch(err => alert("Connection Lost: Failed to parse structural items."))
+        .finally(() => window.hideLoader());
 };
 
 window.fetchQuizDataAndRender = () => {
@@ -248,6 +270,7 @@ window.fetchQuizDataAndRender = () => {
     fetch(`${API_URL}?action=getFullChapterData&sheetName=${encodeURIComponent(state.activeSubject)}&chapterName=${encodeURIComponent(state.activeChapter)}&chapterIndex=${state.activeChapterIndex}&lang=${state.lang}`)
         .then(res => res.json())
         .then(data => { state.allQuestions = data; window.saveState(); window.renderQuizUI(); })
+        .catch(err => alert("Connection error: Sync failed."))
         .finally(() => window.hideLoader());
 };
 
@@ -260,14 +283,18 @@ window.changeQuestion = (direction) => {
     window.triggerHapticFeedback(10);
     const targetIndex = state.currentQuestionIndex + direction;
     if (targetIndex >= 0 && targetIndex < state.allQuestions.length) {
-        state.currentQuestionIndex = targetIndex; window.saveState(); window.renderActiveQuestionCard();
+        state.currentQuestionIndex = targetIndex; 
+        window.saveState(); 
+        window.renderActiveQuestionCard();
     }
 };
 
 window.registerUserSelectionChoice = (chosenChar) => {
     if (state.userAnswers[state.currentQuestionIndex] !== undefined) return;
     state.userAnswers[state.currentQuestionIndex] = chosenChar;
-    window.saveState(); window.renderActiveQuestionCard();
+    window.saveState(); 
+    window.renderActiveQuestionCard();
+    
     const qData = state.allQuestions[state.currentQuestionIndex];
     if (qData && chosenChar !== (qData.Answer || qData.answer || "").trim().toUpperCase()) {
         setTimeout(() => { window.toggleExplanation(true); }, 150);
@@ -282,14 +309,19 @@ window.toggleExplanation = (forcedState = null) => {
     if (open) {
         const qData = state.allQuestions[state.currentQuestionIndex];
         const textNode = document.getElementById('explanation-text');
-        if(textNode) textNode.innerText = qData ? (qData.Explanation || qData.explanation || "No explanation data.") : "";
-        panel.classList.remove('hidden'); window.applyFontSize();
-    } else { panel.classList.add('hidden'); }
+        if(textNode) textNode.innerText = qData ? (qData.Explanation || qData.explanation || "No explanation data available.") : "";
+        panel.classList.remove('hidden'); 
+        window.applyFontSize();
+    } else { 
+        panel.classList.add('hidden'); 
+    }
 };
 
 window.submitQuizEvaluationReport = () => {
-    if (!confirm("Are you sure you want to finalize this session?")) return;
-    window.triggerHapticFeedback(30); window.saveState(); window.location.href = 'results.html';
+    if (!confirm("Are you sure you want to finalize this session and view the metric dashboard?")) return;
+    window.triggerHapticFeedback(30); 
+    window.saveState(); 
+    window.location.href = 'results.html';
 };
 
 window.renderActiveQuestionCard = () => {
@@ -326,9 +358,15 @@ window.renderActiveQuestionCard = () => {
         let badge = "bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400";
         
         if (hasAnswered) {
-            if (isCorrect) { styles = "bg-emerald-50/60 border-emerald-500 text-emerald-900 dark:bg-emerald-950/20 dark:border-emerald-500 dark:text-emerald-300"; badge = "bg-emerald-500 text-white"; }
-            else if (isSelected) { styles = "bg-rose-50/60 border-rose-500 text-rose-900 dark:bg-rose-950/20 dark:border-rose-500 dark:text-rose-300"; badge = "bg-rose-500 text-white"; }
-            else { styles = "opacity-50 pointer-events-none border-slate-100 dark:border-slate-800/40 text-slate-400 dark:text-slate-600"; }
+            if (isCorrect) { 
+                styles = "bg-emerald-50/60 border-emerald-500 text-emerald-900 dark:bg-emerald-950/20 dark:border-emerald-500 dark:text-emerald-300"; 
+                badge = "bg-emerald-500 text-white"; 
+            } else if (isSelected) { 
+                styles = "bg-rose-50/60 border-rose-500 text-rose-900 dark:bg-rose-950/20 dark:border-rose-500 dark:text-rose-300"; 
+                badge = "bg-rose-500 text-white"; 
+            } else { 
+                styles = "opacity-50 pointer-events-none border-slate-100 dark:border-slate-800/40 text-slate-400 dark:text-slate-600"; 
+            }
         }
 
         const btn = document.createElement('button');
@@ -339,12 +377,16 @@ window.renderActiveQuestionCard = () => {
         container.appendChild(btn);
     });
 
-    // Live Scoreboard calculation
+    // Scoreboard updates
     let correct = 0, wrong = 0, skipped = 0;
-    for(let i=0; i<=state.currentQuestionIndex; i++) {
-        if(state.userAnswers[i] === undefined) skipped++;
-        else if(state.userAnswers[i] === (state.allQuestions[i].Answer || "").trim().toUpperCase()) correct++;
-        else wrong++;
+    for(let i=0; i<state.allQuestions.length; i++) {
+        if(state.userAnswers[i] === undefined) {
+            if(i <= state.currentQuestionIndex) skipped++;
+        } else if(state.userAnswers[i] === (state.allQuestions[i].Answer || state.allQuestions[i].answer || "").trim().toUpperCase()) {
+            correct++;
+        } else {
+            wrong++;
+        }
     }
     
     const liveCorrect = document.getElementById('score-live-correct');
@@ -382,7 +424,7 @@ window.syncActiveMatrixItemGridHighlight = () => {
         if (!btn) return;
         const ans = state.userAnswers[idx];
         if (ans !== undefined) {
-            if (ans === (q.Answer || "").trim().toUpperCase()) btn.className = "h-9 w-full rounded-xl text-xs font-bold border-emerald-500 bg-emerald-500 text-white shadow-sm";
+            if (ans === (q.Answer || q.answer || "").trim().toUpperCase()) btn.className = "h-9 w-full rounded-xl text-xs font-bold border-emerald-500 bg-emerald-500 text-white shadow-sm";
             else btn.className = "h-9 w-full rounded-xl text-xs font-bold border-rose-500 bg-rose-500 text-white shadow-sm";
         } else {
             btn.className = "h-9 w-full rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400";
@@ -394,7 +436,7 @@ window.syncActiveMatrixItemGridHighlight = () => {
 window.renderResults = () => {
     let correctCount = 0;
     state.allQuestions.forEach((q, idx) => {
-        if (q && state.userAnswers[idx] === (q.Answer || "").trim().toUpperCase()) correctCount++;
+        if (q && state.userAnswers[idx] === (q.Answer || q.answer || "").trim().toUpperCase()) correctCount++;
     });
     const percent = state.allQuestions.length === 0 ? 0 : Math.round((correctCount / state.allQuestions.length) * 100);
     
@@ -412,7 +454,7 @@ window.renderResults = () => {
 
     state.allQuestions.forEach((q, idx) => {
         const userAnswer = state.userAnswers[idx];
-        const correctAnswer = (q.Answer || "").trim().toUpperCase();
+        const correctAnswer = (q.Answer || q.answer || "").trim().toUpperCase();
         const isCorrect = userAnswer === correctAnswer;
         const isSkipped = userAnswer === undefined;
         
@@ -431,7 +473,7 @@ window.renderResults = () => {
             </div>
             <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-950/60 border border-slate-100 dark:border-slate-800/60">
                 <span class="text-[10px] uppercase font-black tracking-wider text-brand-500 block mb-1">Explanation</span>
-                <p class="text-[11px] font-medium text-slate-600 dark:text-slate-400">${q.Explanation || q.explanation || "No explanation."}</p>
+                <p class="text-[11px] font-medium text-slate-600 dark:text-slate-400">${q.Explanation || q.explanation || "No explanation data provided."}</p>
             </div>
         `;
         reviewContainer.appendChild(itemCard);
@@ -450,12 +492,5 @@ window.initSwipeGestures = () => {
     }, { passive: true });
 };
 
-document.addEventListener('keydown', (e) => {
-    if(window.location.pathname.includes('quiz.html')) {
-        if (e.key === 'ArrowRight') window.changeQuestion(1);
-        if (e.key === 'ArrowLeft') window.changeQuestion(-1);
-    }
-});
-
-// Tailwind Setup Injection Rule
+// Injection configuration values for styling layer compilation rules
 tailwind.config = { darkMode: 'class', theme: { extend: { colors: { brand: { 50: '#f5f3ff', 100: '#ede9fe', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca' } } } } };
