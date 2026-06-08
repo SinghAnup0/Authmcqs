@@ -41,6 +41,7 @@ onAuthStateChanged(auth, (user) => {
         if (email) email.textContent = user.email;
         
         if (email) state.userEmail = user.email;
+        saveState(); // Keep email persisted across sub-page window navigation redirects
       
         if (isAuthPage) window.location.href = 'subjects.html';
     } else {
@@ -199,10 +200,19 @@ window.updateHapticsUI = () => {
 
 // --- DATA FETCHING & ENGINE MERGE ---
 function loadSubjects() {
-  window.showLoader();
-    fetch(`${API_URL}?action=getSubjects&lang=${state.lang}`)
+    window.showLoader();
+    const userEmailParam = state.userEmail ? `&userEmail=${encodeURIComponent(state.userEmail)}` : '';
+    const targetUrl = `${API_URL}?action=getSubjects&lang=${state.lang}${userEmailParam}`;
+    
+    executeMatrixDiagnosticDebugger("loadSubjects Fetch Target", { url: targetUrl });
+
+    fetch(targetUrl)
         .then(res => res.json())
         .then(data => {
+            if (data.error) {
+                alert(`Access Blocked: ${data.message || "Unauthorized account verification pattern."}`);
+                return;
+            }
             const container = document.getElementById('subjects-container');
             if(!container) return;
             container.innerHTML = "";
@@ -221,16 +231,25 @@ function loadSubjects() {
         }).catch(err => alert("Connection Lost: Failed to load modules."))
         .finally(() => window.hideLoader());
 }
-function loadChapters() {
 
-  if(!state.activeSubject) { window.location.href = 'subjects.html'; return; }
+function loadChapters() {
+    if(!state.activeSubject) { window.location.href = 'subjects.html'; return; }
     window.showLoader();
     const titleNode = document.getElementById('current-subject-title');
     if(titleNode) titleNode.innerText = state.activeSubject.replace(/\.json$/i, '');
     
-    fetch(`${API_URL}?action=getChapters&sheetName=${encodeURIComponent(state.activeSubject)}&lang=${state.lang}`)
+    const userEmailParam = state.userEmail ? `&userEmail=${encodeURIComponent(state.userEmail)}` : '';
+    const targetUrl = `${API_URL}?action=getChapters&sheetName=${encodeURIComponent(state.activeSubject)}&lang=${state.lang}${userEmailParam}`;
+    
+    executeMatrixDiagnosticDebugger("loadChapters Fetch Target", { url: targetUrl });
+
+    fetch(targetUrl)
         .then(res => res.json())
         .then(data => {
+            if (data.error) {
+                alert(`Access Blocked: ${data.message || "Unauthorized account verification pattern."}`);
+                return;
+            }
             const container = document.getElementById('chapters-container');
             if(!container) return;
             container.innerHTML = "";
@@ -276,15 +295,12 @@ function toggleLanguage(lang, fetchNewData = true) {
     if(fetchNewData) {
         triggerHapticFeedback(20);
         
-        const isViewingQuiz = document.getElementById('view-quiz') && !document.getElementById('view-quiz').classList.contains('hidden');
-        const isViewingChapters = document.getElementById('view-chapters') && !document.getElementById('view-chapters').classList.contains('hidden');
-
-        if (isViewingQuiz && state.activeSubject && state.activeChapter) {
+        const path = window.location.pathname;
+        if (path.includes('quiz.html') && state.activeSubject && state.activeChapter) {
             launchQuizEvaluationEngine(state.activeChapter, state.activeChapterIndex, true);
-        } else if (isViewingChapters && state.activeSubject) {
+        } else if (path.includes('chapters.html') && state.activeSubject) {
             loadChapters();
-        } else {
-            clearQuizState();
+        } else if (path.includes('subjects.html')) {
             loadSubjects();
         }
     }
@@ -295,11 +311,6 @@ function launchQuizEvaluationEngine(chapterName, chapterIdx, isLanguageSwitch = 
     state.activeChapterIndex = chapterIdx !== undefined ? chapterIdx : state.activeChapterIndex;
     
     if (!isLanguageSwitch) {
-        if (window.event && (window.event.type === 'click' || window.event.currentTarget?.id === 'chapters-container')) {
-            state.allQuestions = [];
-            state.currentQuestionIndex = 0;
-            state.userAnswers = {};
-        }
         state.activeChapter = chapterName;
     }
     saveState();
@@ -308,14 +319,19 @@ function launchQuizEvaluationEngine(chapterName, chapterIdx, isLanguageSwitch = 
     const panel = document.getElementById('explanation-panel');
     if(panel) panel.classList.add('hidden');
 
-    const endpointUrl = `${API_URL}?action=getFullChapterData&sheetName=${encodeURIComponent(state.activeSubject)}&chapterName=${encodeURIComponent(chapterName)}&chapterIndex=${state.activeChapterIndex}&lang=${state.lang}&userEmail=${encodeURIComponent(state.userEmail)}`;
+    const userEmailParam = state.userEmail ? `&userEmail=${encodeURIComponent(state.userEmail)}` : '';
+    const endpointUrl = `${API_URL}?action=getFullChapterData&sheetName=${encodeURIComponent(state.activeSubject)}&chapterName=${encodeURIComponent(chapterName)}&chapterIndex=${state.activeChapterIndex}&lang=${state.lang}${userEmailParam}`;
     executeMatrixDiagnosticDebugger("Networking Pipeline Hook: Fetching Complete Target Questions Stream Node Packet", { url: endpointUrl, chapterIndex: state.activeChapterIndex, languageToggleAction: isLanguageSwitch });
 
     fetch(endpointUrl)
         .then(res => res.json())
         .then(data => {
             executeMatrixDiagnosticDebugger("Networking Response Received: Structural Evaluation Questions Collection Data", { questionsCount: data?.length, questionsPayload: data });
-            if (data.error || !Array.isArray(data) || data.length === 0) {
+            if (data.error) {
+                alert(`Access Blocked: ${data.message || "Unauthorized account verification pattern."}`);
+                return;
+            }
+            if (!Array.isArray(data) || data.length === 0) {
                 alert("Structural Failure: Unable to build parsing indexes.");
                 return;
             }
