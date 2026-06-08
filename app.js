@@ -26,12 +26,13 @@ let state = {
 };
 
 // --- AUTHENTICATION LOGIC ---
+// --- FIXED AUTHENTICATION LOGIC ---
 onAuthStateChanged(auth, (user) => {
     const path = window.location.pathname;
     const isAuthPage = path.includes('index.html') || path === '/' || path.endsWith('/');
 
     if (user) {
-        // Populate Sidebar Profile
+        // Populate Sidebar Profile Details
         const img = document.getElementById('sidebar-user-img');
         const name = document.getElementById('sidebar-user-name');
         const email = document.getElementById('sidebar-user-email');
@@ -40,9 +41,17 @@ onAuthStateChanged(auth, (user) => {
         if (name) name.textContent = user.displayName;
         if (email) email.textContent = user.email;
         
-        if (email) state.userEmail = user.email;
+        // Lock user email securely into application state frame
+        state.userEmail = user.email;
+        saveState(); 
       
-        if (isAuthPage) window.location.href = 'subjects.html';
+        if (isAuthPage) {
+            window.location.href = 'subjects.html';
+        } else {
+            // SAFE DATA TRIGGER: Now that we are 100% sure the email exists, load the data!
+            if (path.includes('subjects.html')) loadSubjects();
+            if (path.includes('chapters.html')) loadChapters();
+        }
     } else {
         if (!isAuthPage) window.location.href = 'index.html';
     }
