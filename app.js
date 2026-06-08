@@ -143,36 +143,98 @@ window.applyFontSize = () => {
     optionsSpans.forEach(span => span.className = `opt-text-target scale-opt-${state.fontSizeIndex}`);
 };
 
-window.toggleLanguage = (lang, fetchNewData = true) => {
+window.toggleLanguage = function(lang, fetchNewData = true) {
     if (!lang) {
         lang = state.lang === 'en' ? 'hi' : 'en';
     }
     if (lang !== 'en' && lang !== 'hi') return;
-    
     state.lang = lang;
-    window.saveState();
     
-    // Update button UI
+    if (typeof saveState === 'function') saveState();
+    else if (window.saveState) window.saveState();
+    
     const btnEn = document.getElementById('lang-btn-en');
     const btnHi = document.getElementById('lang-btn-hi');
     
     if (state.lang === 'hi') {
-        if(btnHi) btnHi.className = "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black bg-brand-600 text-white";
-        if(btnEn) btnEn.className = "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
+        if(btnHi) btnHi.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm";
+        if(btnEn) btnEn.className = "px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
     } else {
-        if(btnEn) btnEn.className = "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black bg-brand-600 text-white";
-        if(btnHi) btnHi.className = "px-2 h-7 sm:h-8 rounded-lg text-[10px] font-black text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
+        if(btnEn) btnEn.className = "px-2.5 py-1 text-xs font-bold rounded-lg bg-brand-600 text-white shadow-sm";
+        if(btnHi) btnHi.className = "px-2.5 py-1 text-xs font-semibold rounded-lg text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-slate-800";
+    }
+
+    if (typeof executeMatrixDiagnosticDebugger === 'function') {
+        executeMatrixDiagnosticDebugger("UI Cross Language Action: Language Matrix Mutation Hook Captured", { selectedLanguage: state.lang, pipelineRemoteSync: fetchNewData });
     }
 
     if (fetchNewData) {
-        window.triggerHapticFeedback(20);
+        if (typeof triggerHapticFeedback === 'function') triggerHapticFeedback(20);
         
-        // Since we are in an MPA, we don't need to check .hidden classes.
-        // We just reload the page, and the page's onLoad logic will fetch 
-        // the data based on the new 'state.lang' variable.
-        window.location.reload();
+        // MPA-Safe DOM Resolution: Fallback gracefully if structural views are split into separate files
+        const viewQuizEl = document.getElementById('view-quiz') || document.getElementById('quiz-card-container');
+        const viewChaptersEl = document.getElementById('view-chapters') || document.getElementById('chapters-container');
+        
+        const isViewingQuiz = viewQuizEl ? (!viewQuizEl.classList.contains('hidden') || window.location.pathname.includes('quiz.html')) : window.location.pathname.includes('quiz.html');
+        const isViewingChapters = viewChaptersEl ? (!viewChaptersEl.classList.contains('hidden') || window.location.pathname.includes('chapters.html')) : window.location.pathname.includes('chapters.html');
+
+        if (isViewingQuiz && state.activeSubject && state.activeChapter) {
+            // Force the 3rd argument to true, identifying this as an in-place translation update
+            if (typeof launchQuizEvaluationEngine === 'function') {
+                launchQuizEvaluationEngine(state.activeChapter, state.activeChapterIndex, true);
+            } else if (window.launchQuizEvaluationEngine) {
+                window.launchQuizEvaluationEngine(state.activeChapter, state.activeChapterIndex, true);
+            }
+        } else if (isViewingChapters && state.activeSubject) {
+            if (typeof loadChapters === 'function') loadChapters();
+        } else {
+            if (typeof clearQuizState === 'function') clearQuizState();
+            if (typeof loadSubjects === 'function') loadSubjects();
+        }
     }
 };
+
+function launchQuizEvaluationEngine(chapterName, chapterIdx, isLanguageSwitch = false) {
+    state.activeChapterIndex = chapterIdx !== undefined ? chapterIdx : state.activeChapterIndex;
+    
+    // Explicitly check for the language switch flag to block accidental state wipes
+    if (!isLanguageSwitch) {
+        state.allQuestions = [];
+        state.currentQuestionIndex = 0;
+        state.userAnswers = {};
+        state.activeChapter = chapterName;
+    }
+    saveState();
+
+    showLoader();
+    const panel = document.getElementById('explanation-panel');
+    if(panel) panel.classList.add('hidden');
+
+    const endpointUrl = `${API_URL}?action=getFullChapterData&sheetName=${encodeURIComponent(state.activeSubject)}&chapterName=${encodeURIComponent(chapterName)}&chapterIndex=${state.activeChapterIndex}&lang=${state.lang}`;
+    executeMatrixDiagnosticDebugger("Networking Pipeline Hook: Fetching Complete Target Questions Stream Node Packet", { url: endpointUrl, chapterIndex: state.activeChapterIndex, languageToggleAction: isLanguageSwitch });
+
+    fetch(endpointUrl)
+        .then(res => res.json())
+        .then(data => {
+            executeMatrixDiagnosticDebugger("Networking Response Received: Structural Evaluation Questions Collection Data", { questionsCount: data?.length, questionsPayload: data });
+            if (data.error || !Array.isArray(data) || data.length === 0) {
+                alert("Structural Failure: Unable to build parsing indexes.");
+                return;
+            }
+            
+            state.allQuestions = data;
+            saveState();
+            
+            const indicator = document.getElementById('quiz-chapter-indicator');
+            if(indicator) indicator.innerText = state.activeChapter.toUpperCase();
+            
+            buildQuestionMatrixSelectionGrid();
+            renderActiveQuestionCard();
+            navigateTo('quiz');
+        })
+        .catch(err => showNetworkError(err))
+        .finally(() => hideLoader());
+}
 
 window.triggerHapticFeedback = (ms) => { if (state.haptics && navigator.vibrate) navigator.vibrate(ms); };
 window.toggleHaptics = () => { state.haptics = !state.haptics; window.saveState(); window.updateHapticsUI(); if(state.haptics) window.triggerHapticFeedback(20); };
